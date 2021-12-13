@@ -1,9 +1,9 @@
-# MisileLab License V1.5
+# Misilelab license v1.6
 
-Author Information : Project by Author
+Author information : Poggychat server by Misilelaboratory
 
 ## derivative works condition
 
 You need change project to open source project or get permission for private project from project author.  
-You need give author information to other like this. ex) {Project or File Name} by {author}.  
+You need give author information to other like this. ex) {Project or File name} by {author}.  
 Author doesn't have warranty.  

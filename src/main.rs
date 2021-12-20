@@ -36,7 +36,8 @@ async fn message_system(listener: TcpListener) {
                         if result.unwrap() < 1 {
                             break;
                         }
-                        tx.send((line.clone(), addr));
+                        
+                        tx.send((line.clone(), addr)).unwrap();
                         line.clear();
                     }
 

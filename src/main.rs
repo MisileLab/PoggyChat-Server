@@ -3,6 +3,10 @@ use tokio::{
     io::{AsyncBufReadExt, BufReader}, sync::broadcast
 };
 
+use serde_json::{
+    Value
+};
+
 use std::env::{
     args
 };
@@ -44,10 +48,39 @@ async fn message_system(listener: TcpListener) {
                     result = rx.recv() => {
                         let (msg, receiveaddr) = result.unwrap();
 
-                        print!("{}", msg);
+                        let msg: &str = msg.as_str();
+                        let value = msg_to_value(msg);
+                        let msgstruct = value_to_msg_struct(value);
+
+                        
+
+                        
                     }
                 }
             }
         });
     }
+}
+
+fn msg_to_value(msg: &str) -> Value {
+    let v: Value = serde_json::from_str(msg).unwrap();
+
+    return v;
+}
+
+fn value_to_msg_struct(value: Value) -> MessageStruct {
+    let toaddr = &value["toaddr"];
+    let content = &value["content"];
+
+    let messagestruct = MessageStruct{
+        content: content.to_string(),
+        toaddr: toaddr.to_string(),
+    };
+
+    return messagestruct
+}
+
+struct MessageStruct {
+    content: String,
+    toaddr: String
 }

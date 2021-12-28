@@ -1,23 +1,20 @@
 use tokio::{
-    net::TcpListener,
-    io::{AsyncBufReadExt, BufReader}, sync::broadcast
+    net::{TcpListener, TcpStream},
+    io::{AsyncBufReadExt, BufReader, AsyncWriteExt}, 
+    sync::broadcast
+};
+use serde_json::Value;
+
+use serde::{
+    Serialize, Deserialize
 };
 
-use serde_json::{
-    Value
-};
+use std::env::args;
 
-use std::env::{
-    args
-};
-
-#[tokio::main]
-async fn main() {
-    let port = args().nth(1).expect("does not have required args: port");
-    println!("Try run server on {}", port);
-    let listener = TcpListener::bind(format!("127.0.0.1:{}", port)).await.unwrap();
-    message_system(listener).await;
-    // Get message from client -> Save message history in file -> Send message to other client
+#[derive(Serialize, Deserialize)]
+struct MessageStructure {
+    content: String,
+    toaddr: String
 }
 
 async fn message_system(listener: TcpListener) {
@@ -52,7 +49,16 @@ async fn message_system(listener: TcpListener) {
                         let value = msg_to_value(msg);
                         let msgstruct = value_to_msg_struct(value);
 
-                        
+                        let stream = TcpStream::connect(receiveaddr).await;
+
+                        let mut stream = match stream {
+                            Ok(stream) => stream,
+                            Err(_) => break // now break but saving message to file is required.
+                        };
+
+                        let streamjson = serde_json::to_string(&msgstruct);
+
+                        stream.write_all(streamjson.unwrap().as_bytes()).await.unwrap();
 
                         
                     }
@@ -68,19 +74,23 @@ fn msg_to_value(msg: &str) -> Value {
     return v;
 }
 
-fn value_to_msg_struct(value: Value) -> MessageStruct {
+fn value_to_msg_struct(value: Value) -> MessageStructure {
     let toaddr = &value["toaddr"];
     let content = &value["content"];
 
-    let messagestruct = MessageStruct{
+    let messagestruct = MessageStructure{
         content: content.to_string(),
-        toaddr: toaddr.to_string(),
+        toaddr: toaddr.to_string()
     };
 
     return messagestruct
 }
 
-struct MessageStruct {
-    content: String,
-    toaddr: String
+
+#[tokio::main]
+async fn main() {
+    let port = args().nth(1).expect("does not have required args: port");
+    println!("Try run server on {}", port);
+    let listener = TcpListener::bind(format!("0.0.0.0:{}",port)).await.unwrap();
+    message_system(listener).await;
 }

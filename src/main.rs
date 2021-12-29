@@ -3,17 +3,34 @@ use tokio::{
     io::{AsyncBufReadExt, BufReader, AsyncWriteExt}, 
     sync::broadcast
 };
+
 use serde_json::Value;
 
 use serde::{
     Serialize, Deserialize
 };
 
-use std::env::args;
+use std::{
+    env::args,
+    fs::File, 
+    io::Write
+};
 
-#[derive(Serialize, Deserialize)]
 struct MessageStructure {
     content: String,
+    toaddr: String
+}
+
+#[derive(Serialize, Deserialize)]
+struct SendMessageStructure {
+    content: String,
+    receiveaddr: String
+}
+
+#[derive(Serialize, Deserialize)]
+struct SavingMessageStructure {
+    content: String,
+    receiveaddr: String,
     toaddr: String
 }
 
@@ -49,16 +66,36 @@ async fn message_system(listener: TcpListener) {
                         let value = msg_to_value(msg);
                         let msgstruct = value_to_msg_struct(value);
 
-                        let stream = TcpStream::connect(receiveaddr).await;
+                        let stream = TcpStream::connect(&msgstruct.toaddr).await;
 
-                        let mut stream = match stream {
-                            Ok(stream) => stream,
-                            Err(_) => break // now break but saving message to file is required.
+                        let streamerr = match stream {
+                            Ok(_) => 0,
+                            Err(_) => 1
                         };
 
-                        let streamjson = serde_json::to_string(&msgstruct);
+                        if streamerr == 0 {
+                            let streamjsonstruct = SendMessageStructure {
+                                receiveaddr: receiveaddr.clone().to_string(),
+                                content: msgstruct.content.clone()
+                            };
 
-                        stream.write_all(streamjson.unwrap().as_bytes()).await.unwrap();
+                            let streamjson = serde_json::to_string(&streamjsonstruct);
+                            let mut stream = TcpStream::connect(msgstruct.toaddr.clone()).await.unwrap();
+                            stream.write_all(streamjson.unwrap().as_bytes()).await.unwrap();
+                        }
+
+                        let savingjsonstruct = SavingMessageStructure {
+                            receiveaddr: receiveaddr.to_string(),
+                            content: msgstruct.content,
+                            toaddr: msgstruct.toaddr
+                        };
+
+                        let file = File::open("msglist.txt");
+                        let mut file = match file {
+                            Ok(file) => file,
+                            Err(_) => File::create("msglist.txt").unwrap()
+                        };
+                        file.write_all(serde_json::to_string(&savingjsonstruct).unwrap().as_bytes()).unwrap();
 
                         
                     }

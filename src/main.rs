@@ -20,6 +20,14 @@ use std::{
     io::Write
 };
 
+use actix_web::{
+    get, 
+    web, 
+    App, 
+    HttpServer, 
+    Responder
+};
+
 struct MessageStructure {
     content: String,
     toaddr: String
@@ -95,7 +103,7 @@ async fn message_system(listener: TcpListener) {
                             receiveaddr: receiveaddr.to_string(),
                             content: msgstruct.content,
                             toaddr: msgstruct.toaddr,
-                            date: dt.timestamp();
+                            date: dt.timestamp()
                         };
 
                         let file = File::open("msglist.txt");
@@ -136,6 +144,15 @@ fn value_to_msg_struct(value: Value) -> MessageStructure {
 async fn main() {
     let port = args().nth(1).expect("does not have required args: port");
     println!("Try run server on {}", port);
-    let listener = TcpListener::bind(format!("0.0.0.0:{}",port)).await.unwrap();
+    let listener = TcpListener::bind(format!("0.0.0.0:{}", port)).await.unwrap();
     message_system(listener).await;
+}
+
+#[actix_web::main]
+async fn web_main() -> Result<(), std::io::Error> {
+    let port = args().nth(1).expect("does not have required args: port");
+    HttpServer::new(|| App::new().service(index))
+    .bind(format!("0.0.0.0:{}", port))?
+    .run()
+    .await
 }

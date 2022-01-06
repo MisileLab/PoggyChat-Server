@@ -4,6 +4,10 @@ use tokio::{
     sync::broadcast
 };
 
+use chrono::{
+    Utc
+};
+
 use serde_json::Value;
 
 use serde::{
@@ -31,7 +35,8 @@ struct SendMessageStructure {
 struct SavingMessageStructure {
     content: String,
     receiveaddr: String,
-    toaddr: String
+    toaddr: String,
+    date: i64
 }
 
 async fn message_system(listener: TcpListener) {
@@ -84,10 +89,13 @@ async fn message_system(listener: TcpListener) {
                             stream.write_all(streamjson.unwrap().as_bytes()).await.unwrap();
                         }
 
+                        let dt = Utc::now();
+
                         let savingjsonstruct = SavingMessageStructure {
                             receiveaddr: receiveaddr.to_string(),
                             content: msgstruct.content,
-                            toaddr: msgstruct.toaddr
+                            toaddr: msgstruct.toaddr,
+                            date: dt.timestamp();
                         };
 
                         let file = File::open("msglist.txt");

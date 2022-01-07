@@ -1,3 +1,9 @@
+mod poggychatapi {
+    include!("modules/server.rs");
+}
+
+use futures::join;
+
 use tokio::{
     net::{TcpListener, TcpStream},
     io::{AsyncBufReadExt, BufReader, AsyncWriteExt}, 
@@ -20,12 +26,11 @@ use std::{
     io::Write
 };
 
+use poggychatapi::*;
+
 use actix_web::{
-    get, 
-    web, 
     App, 
-    HttpServer, 
-    Responder
+    HttpServer
 };
 
 struct MessageStructure {
@@ -48,6 +53,7 @@ struct SavingMessageStructure {
 }
 
 async fn message_system(listener: TcpListener) {
+    println!("running message system");
     let (tx, _rx) = broadcast::channel(10);
 
     loop {
@@ -145,14 +151,15 @@ async fn main() {
     let port = args().nth(1).expect("does not have required args: port");
     println!("Try run server on {}", port);
     let listener = TcpListener::bind(format!("0.0.0.0:{}", port)).await.unwrap();
-    message_system(listener).await;
+    join!(message_system(listener), web_main()).1.unwrap();
 }
 
-#[actix_web::main]
 async fn web_main() -> Result<(), std::io::Error> {
-    let port = args().nth(1).expect("does not have required args: port");
+    let port: u32 = args().nth(1).expect("does not have required args: port").parse().unwrap();
+    let addresswithport = format!("0.0.0.0:{}", (port + 1).to_string());
+    println!("Try run web server on port {}", (port + 1).to_string());
     HttpServer::new(|| App::new().service(index))
-    .bind(format!("0.0.0.0:{}", port))?
+    .bind(addresswithport)?
     .run()
     .await
 }
